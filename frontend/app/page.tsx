@@ -115,8 +115,8 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-lg font-semibold text-slate-700 mb-3">Top 3 หมวดหมู่</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {summary.top_categories.map((cat, i) => (
-                <div key={cat.category_id} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4">
+              {(summary.top_categories || []).map((cat, i) => (
+                <div key={cat.category_id || i} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4">
                   <div className="text-3xl">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</div>
                   <div>
                     <p className="font-semibold text-slate-700">{cat.category_icon} {cat.category_name}</p>
@@ -137,7 +137,7 @@ export default function DashboardPage() {
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
                     <Pie
-                      data={summary.expenses_by_category}
+                      data={summary.expenses_by_category || []}
                       dataKey="total_amount"
                       nameKey="category_name"
                       cx="50%"
@@ -165,7 +165,7 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-slate-700 mb-4">เปรียบเทียบหมวดหมู่</h2>
               {summary.expenses_by_category.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={summary.expenses_by_category}>
+                  <BarChart data={summary.expenses_by_category || []}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis dataKey="category_name" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />

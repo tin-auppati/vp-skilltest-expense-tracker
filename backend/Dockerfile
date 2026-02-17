@@ -13,9 +13,11 @@ COPY . .
 RUN go build -o expense-tracker .
 
 # Final stage
-FROM alpine:latest
+FROM alpine:3.19
 
 WORKDIR /app
+
+RUN apk add --no-cache ca-certificates tzdata
 
 # Copy binary from builder
 COPY --from=builder /app/expense-tracker .
