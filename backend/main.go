@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -27,7 +28,7 @@ func main() {
 
 	// CORS
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     []string{"http://localhost:3000","http://127.0.0.1:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
 		AllowCredentials: true,
@@ -44,7 +45,6 @@ func main() {
 
 		// Expenses
 		api.GET("/expenses", getExpenses)
-		api.GET("/expenses/export", exportExpensesCSV)
 		api.POST("/expenses", createExpense)
 		api.PUT("/expenses/:id", updateExpense)
 		api.DELETE("/expenses/:id", deleteExpense)
@@ -64,14 +64,19 @@ func main() {
 
 func initDB() {
 	var err error
-	dsn := "host=" + os.Getenv("DB_HOST") +
-		" user=" + os.Getenv("DB_USER") +
-		" password=" + os.Getenv("DB_PASSWORD") +
-		" dbname=" + os.Getenv("DB_NAME") +
-		" port=" + os.Getenv("DB_PORT") +
-		" sslmode=disable TimeZone=Asia/Bangkok"
+	
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Bangkok",
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+		os.Getenv("DB_PORT"),
+	)
 
+	// บรรทัดนี้เหมือนเดิม
 	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
@@ -90,7 +95,7 @@ func migrate() {
 func seedCategories() {
 	var count int64
 	db.Model(&Category{}).Count(&count)
-	
+
 	if count == 0 {
 		defaultCategories := []Category{
 			{Name: "อาหาร", Icon: "🍜"},

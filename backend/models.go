@@ -17,7 +17,7 @@ type Expense struct {
 	CategoryID  uint      `json:"category_id" gorm:"not null"`
 	Category    Category  `json:"category" gorm:"foreignKey:CategoryID"`
 	Description string    `json:"description"`
-	Date        time.Time `json:"date" gorm:"not null"`
+	Date        time.Time `json:"date" gorm:"type:date;not null"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 

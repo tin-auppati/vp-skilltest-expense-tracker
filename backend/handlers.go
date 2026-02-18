@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // Category handlers
@@ -93,7 +95,9 @@ func getExpenses(c *gin.Context) {
 
 	// Filter by category
 	if categoryID := c.Query("category_id"); categoryID != "" {
-		query = query.Where("category_id = ?", categoryID)
+		if catID, err := strconv.Atoi(categoryID); err == nil {
+			query = query.Where("category_id = ?", catID)
+		}
 	}
 
 	// Sort
@@ -180,97 +184,97 @@ func deleteExpense(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Expense deleted successfully"})
 }
 
-func exportExpensesCSV(c *gin.Context) {
-	var expenses []Expense
-	query := db.Preload("Category")
-
-	// Filter by date range
-	if startDate := c.Query("start_date"); startDate != "" {
-		query = query.Where("date >= ?", startDate)
-	}
-	if endDate := c.Query("end_date"); endDate != "" {
-		query = query.Where("date <= ?", endDate)
-	}
-
-	// Filter by category
-	if categoryID := c.Query("category_id"); categoryID != "" {
-		query = query.Where("category_id = ?", categoryID)
-	}
-	
-	query.Order("date DESC").Find(&expenses)
-
-	//set headers for CSV download
-	c.Header("Content-Type", "text/csv")
-	c.Header("Content-Disposition", "attachment;filename=expenses.csv")
-	
-	//write CSV data
-	c.String(http.StatusOK, "Date,Category,Description,Amount\n")
-
-	//write csv rows
-	for _, expense := range expenses {
-		dateStr := expense.Date.Format("2006-01-02")
-		categoryName := expense.Category.Name
-		description := expense.Description
-		if description == "" {
-			description = "-"
-		}
-		amount := fmt.Sprintf("%.2f", expense.Amount)
-		
-		c.String(http.StatusOK, "%s,%s,%s,%s\n", dateStr, categoryName, description, amount)
-	}
-
-}
-
-// Dashboard handler
 func getDashboardSummary(c *gin.Context) {
-	var summary DashboardSummary
+    var summary DashboardSummary
 
-	query := db.Model(&Expense{})
+    // Initialize slices (กัน JSON เป็น null)
+    summary.ExpensesByCategory = make([]CategorySummary, 0)
+    summary.TopCategories = make([]CategorySummary, 0)
+    summary.TimelineData = make([]TimelineData, 0)
 
-	// Filter by date range
-	if startDate := c.Query("start_date"); startDate != "" {
-		query = query.Where("date >= ?", startDate)
-	}
-	if endDate := c.Query("end_date"); endDate != "" {
-		query = query.Where("date <= ?", endDate)
-	}
+    // 1. รับค่า
+    startDateStr := c.Query("start_date")
+    endDateStr := c.Query("end_date")
 
-	// Total expenses
-	var total float64
-	query.Select("COALESCE(SUM(amount), 0)").Scan(&total)
-	summary.TotalExpenses = total
+    // ✅ สร้างฟังก์ชันกรองที่ "ฉลาด" ขึ้น (แก้บั๊ก Midnight + Timezone)
+    applyFilter := func(query *gorm.DB, tableAlias string) *gorm.DB {
+        col := "date"
+        if tableAlias != "" {
+            col = tableAlias + ".date"
+        }
 
-	// Expenses by category
-	var categorySummaries []CategorySummary
-	db.Table("expenses").
-		Select("categories.id as category_id, categories.name as category_name, categories.icon as category_icon, COALESCE(SUM(expenses.amount), 0) as total_amount, COUNT(expenses.id) as count").
-		Joins("JOIN categories ON expenses.category_id = categories.id").
-		Group("categories.id, categories.name, categories.icon").
-		Scan(&categorySummaries)
+        // แปลงเวลาใน DB ให้เป็น String วันที่แบบไทย (YYYY-MM-DD) ก่อนเทียบ
+        // วิธีนี้จะแก้ปัญหาเลือกวันที่ 18 แล้วไม่เจอข้อมูลเวลา 12:30 น.
+        dbDateExpr := fmt.Sprintf("TO_CHAR(%s AT TIME ZONE 'Asia/Bangkok', 'YYYY-MM-DD')", col)
 
-	summary.ExpensesByCategory = categorySummaries
+        if startDateStr != "" {
+            query = query.Where(dbDateExpr+" >= ?", startDateStr)
+        }
+        if endDateStr != "" {
+            query = query.Where(dbDateExpr+" <= ?", endDateStr)
+        }
 
-	// Top 3 categories
-	var topCategories []CategorySummary
-	db.Table("expenses").
-		Select("categories.id as category_id, categories.name as category_name, categories.icon as category_icon, COALESCE(SUM(expenses.amount), 0) as total_amount, COUNT(expenses.id) as count").
-		Joins("JOIN categories ON expenses.category_id = categories.id").
-		Group("categories.id, categories.name, categories.icon").
-		Order("total_amount DESC").
-		Limit(3).
-		Scan(&topCategories)
+        return query
+    }
 
-	summary.TopCategories = topCategories
+    // --- เริ่ม Query ---
 
-	// Timeline data (daily totals)
-	var timelineData []TimelineData
-	db.Table("expenses").
-		Select("DATE(date) as date, COALESCE(SUM(amount), 0) as amount").
-		Group("DATE(date)").
-		Order("date ASC").
-		Scan(&timelineData)
+    // 1. Total Expenses
+    var total float64
+    totalQuery := db.Model(&Expense{})
+    totalQuery = applyFilter(totalQuery, "") // ส่ง Alias ว่าง
+    totalQuery.Select("COALESCE(SUM(amount), 0)").Scan(&total)
+    summary.TotalExpenses = total
 
-	summary.TimelineData = timelineData
+    // 2. Expenses by category
+    var categorySummaries []CategorySummary
+    catQuery := db.Table("expenses").
+        Select("categories.id as category_id, categories.name as category_name, categories.icon as category_icon, COALESCE(SUM(expenses.amount), 0) as total_amount, COUNT(expenses.id) as count").
+        Joins("JOIN categories ON expenses.category_id = categories.id")
 
-	c.JSON(http.StatusOK, summary)
+    // 🔴 ต้อง Assign ค่ากลับใส่ตัวแปรเดิมเสมอ
+    catQuery = applyFilter(catQuery, "expenses") 
+
+    if err := catQuery.Group("categories.id, categories.name, categories.icon").
+        Scan(&categorySummaries).Error; err != nil {
+        fmt.Printf("Error scanning categories: %v\n", err)
+    }
+    summary.ExpensesByCategory = categorySummaries
+
+    // 3. Top 3 Categories
+    var topCategories []CategorySummary
+    topQuery := db.Table("expenses").
+        Select("categories.id as category_id, categories.name as category_name, categories.icon as category_icon, COALESCE(SUM(expenses.amount), 0) as total_amount, COUNT(expenses.id) as count").
+        Joins("JOIN categories ON expenses.category_id = categories.id")
+
+    topQuery = applyFilter(topQuery, "expenses")
+
+    if err := topQuery.Group("categories.id, categories.name, categories.icon").
+        Order("total_amount DESC").
+        Limit(3).
+        Scan(&topCategories).Error; err != nil {
+        fmt.Printf("Error scanning top 3: %v\n", err)
+    }
+    summary.TopCategories = topCategories
+
+    // 4. Timeline Data (แก้เป็น Postgres Syntax)
+    var timelineData []TimelineData
+    timelineQuery := db.Table("expenses")
+    
+    // ✅ ใช้ TO_CHAR ของ Postgres (ไม่ใช่ DATE_FORMAT ของ MySQL)
+    dateSelect := "TO_CHAR(date AT TIME ZONE 'Asia/Bangkok', 'YYYY-MM-DD')"
+    
+    timelineQuery.Select(fmt.Sprintf("%s as date, COALESCE(SUM(amount), 0) as amount", dateSelect))
+    
+    timelineQuery = applyFilter(timelineQuery, "")
+
+    if err := timelineQuery.
+        Group(dateSelect). // Group ตามวันที่ไทย
+        Order("date ASC").
+        Scan(&timelineData).Error; err != nil {
+        fmt.Printf("Error scanning timeline: %v\n", err)
+    }
+    summary.TimelineData = timelineData
+
+    c.JSON(http.StatusOK, summary)
 }

@@ -41,8 +41,10 @@ function useDarkMode() {
 export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [loading, setLoading] = useState(true)
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [dateFilter, setDateFilter] = useState<{
+    start_date?: string
+    end_date?: string
+  }>({})
   const [filterInput, setFilterInput] = useState({ start_date: '', end_date: '' })
   const [error, setError] = useState<string | null>(null)
   const isDark = useDarkMode()
@@ -50,21 +52,15 @@ export default function DashboardPage() {
   const textColor = isDark ? '#e2e8f0' : '#475569'
   const gridColor = isDark ? '#334155' : '#f1f5f9'
   
+  // สร้าง Key สำหรับ Force Re-render กราฟเมื่อวันที่เปลี่ยน
+  const chartKey = `${dateFilter.start_date || 'all'}-${dateFilter.end_date || 'all'}`
 
-  const fetchSummary = async () => {
+  const fetchSummary = async (filter = dateFilter) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await getDashboardSummary({
-        start_date: startDate || undefined,
-        end_date: endDate || undefined,
-      })
-      setSummary({
-        ...data,
-        top_categories: data.top_categories ?? [],
-        expenses_by_category: data.expenses_by_category ?? [],
-        timeline_data: data.timeline_data ?? [],
-      })
+      const data = await getDashboardSummary(filter)
+      setSummary(data)
     } catch (err) {
       console.error(err)
       setError('ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง')
@@ -75,7 +71,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchSummary()
-  }, [startDate, endDate])
+  }, [])
 
   return (
     <div className="space-y-8">
@@ -106,14 +102,24 @@ export default function DashboardPage() {
           />
         </div>
         <button
-          onClick={() => { setStartDate(filterInput.start_date); setEndDate(filterInput.end_date) }}
-          
+          onClick={() => { 
+            const newFilter = {
+              start_date: filterInput.start_date || undefined,
+              end_date: filterInput.end_date || undefined,
+            }
+            setDateFilter(newFilter)
+            fetchSummary(newFilter)
+          }}
           className="bg-sky-500 hover:bg-sky-600 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors"
         >
           ค้นหา
         </button>
         <button
-          onClick={() => { setFilterInput({ start_date: '', end_date: '' }); setStartDate(''); setEndDate('') }}
+          onClick={() => { 
+            setFilterInput({ start_date: '', end_date: '' })
+            setDateFilter({})
+            fetchSummary({})
+          }}
           className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 px-5 py-2 rounded-lg text-sm font-medium transition-colors"
         >
           รีเซ็ต
@@ -137,7 +143,8 @@ export default function DashboardPage() {
           </div>
 
           {/* Top 3 Categories */}
-          <div>
+          {/* เพิ่ม key เพื่อบังคับ Render ใหม่เมื่อ Filter เปลี่ยน */}
+          <div key={`top3-${chartKey}`}>
             <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-3">Top 3 หมวดหมู่</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {(summary.top_categories || []).map((cat, i) => (
@@ -158,9 +165,10 @@ export default function DashboardPage() {
             {/* Pie Chart */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
               <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">รายจ่ายตามหมวดหมู่</h2>
-              {summary.expenses_by_category.length > 0 ? (
+              {(summary.expenses_by_category || []).length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
-                  <PieChart>
+                  {/* เพิ่ม key ที่ PieChart เพื่อแก้ปัญหากราฟค้าง */}
+                  <PieChart key={`pie-${chartKey}`}>
                     <Pie
                       data={summary.expenses_by_category || []}
                       dataKey="total_amount"
@@ -169,7 +177,7 @@ export default function DashboardPage() {
                       cy="50%"
                       outerRadius={90}
                       label={({ category_icon, category_name, percent }) =>
-                        `${category_icon} ${category_name} ${(percent * 100).toFixed(0)}%`
+                        `${category_icon} ${category_name} ${(percent * 100).toFixed( 2)}%`
                       }
                       labelLine={false}
                     >
@@ -199,9 +207,10 @@ export default function DashboardPage() {
             {/* Bar Chart */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
               <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">เปรียบเทียบหมวดหมู่</h2>
-              {summary.expenses_by_category.length > 0 ? (
+              {(summary.expenses_by_category || []).length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={summary.expenses_by_category || []}>
+                   {/* เพิ่ม key ที่ BarChart */}
+                  <BarChart key={`bar-${chartKey}`} data={summary.expenses_by_category || []}>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                     <XAxis dataKey="category_name" tick={{ fontSize: 11, fill: textColor }} />
                     <YAxis tick={{ fontSize: 11, fill: textColor }} />
@@ -233,9 +242,10 @@ export default function DashboardPage() {
           {/* Line Chart */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
             <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">แนวโน้มรายจ่ายตามเวลา</h2>
-            {summary.timeline_data.length > 0 ? (
+            {(summary.timeline_data || []).length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={summary.timeline_data}>
+                 {/* เพิ่ม key ที่ LineChart */}
+                <LineChart key={`line-${chartKey}`} data={summary.timeline_data}>
                   <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                   <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 11, fill: textColor }} />
                   <YAxis tick={{ fontSize: 11, fill: textColor }} />

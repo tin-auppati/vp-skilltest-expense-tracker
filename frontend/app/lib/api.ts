@@ -60,13 +60,3 @@ export const getDashboardSummary = async (filters?: { start_date?: string; end_d
   const { data } = await api.get('/api/dashboard/summary', { params: filters })
   return data
 }
-
-export const exportExpensesCSV = (filters?: ExpenseFilters): string => {
-  const params = new URLSearchParams()
-  if (filters?.start_date) params.append('start_date', filters.start_date)
-  if (filters?.end_date) params.append('end_date', filters.end_date)
-  if (filters?.category_id) params.append('category_id', filters.category_id)
-  
-  const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-  return `${baseURL}/api/expenses/export?${params.toString()}`
-}
