@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -177,6 +178,47 @@ func deleteExpense(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Expense deleted successfully"})
+}
+
+func exportExpensesCSV(c *gin.Context) {
+	var expenses []Expense
+	query := db.Preload("Category")
+
+	// Filter by date range
+	if startDate := c.Query("start_date"); startDate != "" {
+		query = query.Where("date >= ?", startDate)
+	}
+	if endDate := c.Query("end_date"); endDate != "" {
+		query = query.Where("date <= ?", endDate)
+	}
+
+	// Filter by category
+	if categoryID := c.Query("category_id"); categoryID != "" {
+		query = query.Where("category_id = ?", categoryID)
+	}
+	
+	query.Order("date DESC").Find(&expenses)
+
+	//set headers for CSV download
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", "attachment;filename=expenses.csv")
+	
+	//write CSV data
+	c.String(http.StatusOK, "Date,Category,Description,Amount\n")
+
+	//write csv rows
+	for _, expense := range expenses {
+		dateStr := expense.Date.Format("2006-01-02")
+		categoryName := expense.Category.Name
+		description := expense.Description
+		if description == "" {
+			description = "-"
+		}
+		amount := fmt.Sprintf("%.2f", expense.Amount)
+		
+		c.String(http.StatusOK, "%s,%s,%s,%s\n", dateStr, categoryName, description, amount)
+	}
+
 }
 
 // Dashboard handler

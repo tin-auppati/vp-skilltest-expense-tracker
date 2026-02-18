@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getExpenses, getCategories, createExpense, updateExpense, deleteExpense } from '../lib/api'
+import { getExpenses, getCategories, createExpense, updateExpense, deleteExpense, exportExpensesCSV } from '../lib/api'
 import { Expense, Category, ExpenseFilters } from '../types'
 
 const formatMoney = (amount: number) =>
@@ -128,12 +128,21 @@ export default function ExpensesPage() {
           <h1 className="text-2xl font-bold text-slate-800">รายจ่าย</h1>
           <p className="text-slate-500 mt-1">จัดการรายจ่ายทั้งหมดของคุณ</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="bg-sky-500 hover:bg-sky-600 text-white px-5 py-2 rounded-lg font-medium transition-colors"
-        >
-          + เพิ่มรายจ่าย
-        </button>
+        <div className="flex gap-3">
+          <a
+            href={exportExpensesCSV(filters)}
+            download="expenses.csv"
+            className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-medium transition-colors"
+          >
+            📥 Export CSV
+          </a>
+          <button
+            onClick={openCreate}
+            className="bg-sky-500 hover:bg-sky-600 text-white px-5 py-2 rounded-lg font-medium transition-colors"
+          >
+            + เพิ่มรายจ่าย
+          </button>
+        </div>
       </div>
 
       {/* Filter */}

@@ -44,6 +44,7 @@ func main() {
 
 		// Expenses
 		api.GET("/expenses", getExpenses)
+		api.GET("/expenses/export", exportExpensesCSV)
 		api.POST("/expenses", createExpense)
 		api.PUT("/expenses/:id", updateExpense)
 		api.DELETE("/expenses/:id", deleteExpense)
@@ -89,7 +90,7 @@ func migrate() {
 func seedCategories() {
 	var count int64
 	db.Model(&Category{}).Count(&count)
-
+	
 	if count == 0 {
 		defaultCategories := []Category{
 			{Name: "อาหาร", Icon: "🍜"},
