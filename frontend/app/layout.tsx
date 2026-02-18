@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import Link from 'next/link'
-import DarkModeToggle from './components/DarkModeToggle'
+import DarkModeToggle from './components/Darkmodetoggle'
 
 const inter = Inter({ subsets: ['latin'] })
 

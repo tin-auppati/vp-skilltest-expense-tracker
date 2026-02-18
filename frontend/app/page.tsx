@@ -19,16 +19,41 @@ const formatDate = (dateStr: string) => {
 const formatMoney = (amount: number) =>
   new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(amount)
 
+// Custom hook to detect dark mode
+function useDarkMode() {
+  const [isDark, setIsDark] = useState(false)
+  
+  useEffect(() => {
+    const checkDark = () => {
+      setIsDark(document.documentElement.classList.contains('dark'))
+    }
+    
+    checkDark()
+    const observer = new MutationObserver(checkDark)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    
+    return () => observer.disconnect()
+  }, [])
+  
+  return isDark
+}
+
 export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [filterInput, setFilterInput] = useState({ start_date: '', end_date: '' })
   const [error, setError] = useState<string | null>(null)
+  const isDark = useDarkMode()
+  
+  const textColor = isDark ? '#e2e8f0' : '#475569'
+  const gridColor = isDark ? '#334155' : '#f1f5f9'
   
 
   const fetchSummary = async () => {
     setLoading(true)
+    setError(null)
     try {
       const data = await getDashboardSummary({
         start_date: startDate || undefined,
@@ -50,59 +75,59 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchSummary()
-  }, [])
+  }, [startDate, endDate])
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
-        <p className="text-slate-500 mt-1">ภาพรวมค่าใช้จ่ายของคุณ</p>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Dashboard</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">ภาพรวมค่าใช้จ่ายของคุณ</p>
       </div>
 
       {/* Date Filter */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap gap-4 items-end">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 flex flex-wrap gap-4 items-end">
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-1">ตั้งแต่วันที่</label>
+          <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">ตั้งแต่วันที่</label>
           <input
             type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+            value={filterInput.start_date}
+            onChange={(e) => setFilterInput(prev => ({ ...prev, start_date: e.target.value }))}
+            className="border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-1">ถึงวันที่</label>
+          <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">ถึงวันที่</label>
           <input
             type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+            value={filterInput.end_date}
+            onChange={(e) => setFilterInput(prev => ({ ...prev, end_date: e.target.value }))}
+            className="border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
           />
         </div>
         <button
-          onClick={fetchSummary}
+          onClick={() => { setStartDate(filterInput.start_date); setEndDate(filterInput.end_date) }}
           
           className="bg-sky-500 hover:bg-sky-600 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors"
         >
           ค้นหา
         </button>
         <button
-          onClick={() => { setStartDate(''); setEndDate(''); setTimeout(fetchSummary, 0) }}
-          className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-5 py-2 rounded-lg text-sm font-medium transition-colors"
+          onClick={() => { setFilterInput({ start_date: '', end_date: '' }); setStartDate(''); setEndDate('') }}
+          className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 px-5 py-2 rounded-lg text-sm font-medium transition-colors"
         >
           รีเซ็ต
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-700">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
       
       {loading ? (
-        <div className="text-center py-20 text-slate-400">กำลังโหลด...</div>
+        <div className="text-center py-20 text-slate-400 dark:text-slate-500">กำลังโหลด...</div>
       ) : summary ? (
         <>
           {/* Total Card */}
@@ -113,15 +138,15 @@ export default function DashboardPage() {
 
           {/* Top 3 Categories */}
           <div>
-            <h2 className="text-lg font-semibold text-slate-700 mb-3">Top 3 หมวดหมู่</h2>
+            <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-3">Top 3 หมวดหมู่</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {(summary.top_categories || []).map((cat, i) => (
-                <div key={cat.category_id || i} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4">
+                <div key={cat.category_id || i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-4">
                   <div className="text-3xl">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</div>
                   <div>
-                    <p className="font-semibold text-slate-700">{cat.category_icon} {cat.category_name}</p>
-                    <p className="text-sky-600 font-bold">฿{formatMoney(cat.total_amount)}</p>
-                    <p className="text-xs text-slate-400">{cat.count} รายการ</p>
+                    <p className="font-semibold text-slate-700 dark:text-slate-200">{cat.category_icon} {cat.category_name}</p>
+                    <p className="text-sky-600 dark:text-sky-400 font-bold">฿{formatMoney(cat.total_amount)}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">{cat.count} รายการ</p>
                   </div>
                 </div>
               ))}
@@ -131,8 +156,8 @@ export default function DashboardPage() {
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Pie Chart */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6">
-              <h2 className="text-lg font-semibold text-slate-700 mb-4">รายจ่ายตามหมวดหมู่</h2>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+              <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">รายจ่ายตามหมวดหมู่</h2>
               {summary.expenses_by_category.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
@@ -152,24 +177,46 @@ export default function DashboardPage() {
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(val: number) => `฿${formatMoney(val)}`} />
+                    <Tooltip 
+                      formatter={(val: number) => `฿${formatMoney(val)}`}
+                      contentStyle={{ 
+                        backgroundColor: isDark ? '#0f172a' : '#ffffff',
+                        border: `2px solid ${isDark ? '#64748b' : '#e2e8f0'}`,
+                        borderRadius: '8px',
+                        color: isDark ? '#ffffff' : '#1e293b',
+                        padding: '8px 12px'
+                      }}
+                      itemStyle={{ color: isDark ? '#ffffff' : '#1e293b', fontWeight: '500' }}
+                      labelStyle={{ color: isDark ? '#ffffff' : '#1e293b', fontWeight: '600' }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-64 flex items-center justify-center text-slate-400">ไม่มีข้อมูล</div>
+                <div className="h-64 flex items-center justify-center text-slate-400 dark:text-slate-500">ไม่มีข้อมูล</div>
               )}
             </div>
 
             {/* Bar Chart */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6">
-              <h2 className="text-lg font-semibold text-slate-700 mb-4">เปรียบเทียบหมวดหมู่</h2>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+              <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">เปรียบเทียบหมวดหมู่</h2>
               {summary.expenses_by_category.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={summary.expenses_by_category || []}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis dataKey="category_name" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(val: number) => `฿${formatMoney(val)}`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                    <XAxis dataKey="category_name" tick={{ fontSize: 11, fill: textColor }} />
+                    <YAxis tick={{ fontSize: 11, fill: textColor }} />
+                    <Tooltip 
+                      formatter={(val: number) => `฿${formatMoney(val)}`}
+                      contentStyle={{ 
+                        backgroundColor: isDark ? '#0f172a' : '#ffffff',
+                        border: `2px solid ${isDark ? '#64748b' : '#e2e8f0'}`,
+                        borderRadius: '8px',
+                        color: isDark ? '#ffffff' : '#1e293b',
+                        padding: '8px 12px'
+                      }}
+                      itemStyle={{ color: isDark ? '#ffffff' : '#1e293b', fontWeight: '500' }}
+                      labelStyle={{ color: isDark ? '#ffffff' : '#1e293b', fontWeight: '600' }}
+                    />
                     <Bar dataKey="total_amount" name="ยอดรวม" radius={[6, 6, 0, 0]}>
                       {summary.expenses_by_category.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -178,23 +225,35 @@ export default function DashboardPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-64 flex items-center justify-center text-slate-400">ไม่มีข้อมูล</div>
+                <div className="h-64 flex items-center justify-center text-slate-400 dark:text-slate-500">ไม่มีข้อมูล</div>
               )}
             </div>
           </div>
 
           {/* Line Chart */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-700 mb-4">แนวโน้มรายจ่ายตามเวลา</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+            <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">แนวโน้มรายจ่ายตามเวลา</h2>
             {summary.timeline_data.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={summary.timeline_data}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                  <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 11, fill: textColor }} />
+                  <YAxis tick={{ fontSize: 11, fill: textColor }} />
                   <Tooltip
-                    labelFormatter={(label) => `วันที่: ${label}`}
+                    labelFormatter={(label) => {
+                      const date = new Date(label)
+                      return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
+                    }}
                     formatter={(val: number) => [`฿${formatMoney(val)}`, 'ยอดรวม']}
+                    contentStyle={{ 
+                      backgroundColor: isDark ? '#0f172a' : '#ffffff',
+                      border: `2px solid ${isDark ? '#64748b' : '#e2e8f0'}`,
+                      borderRadius: '8px',
+                      color: isDark ? '#ffffff' : '#1e293b',
+                      padding: '8px 12px'
+                    }}
+                    itemStyle={{ color: isDark ? '#ffffff' : '#1e293b', fontWeight: '500' }}
+                    labelStyle={{ color: isDark ? '#ffffff' : '#1e293b', fontWeight: '600' }}
                   />
                   <Line
                     type="monotone"
@@ -207,7 +266,7 @@ export default function DashboardPage() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-52 flex items-center justify-center text-slate-400">ไม่มีข้อมูล</div>
+              <div className="h-52 flex items-center justify-center text-slate-400 dark:text-slate-500">ไม่มีข้อมูล</div>
             )}
           </div>
         </>
