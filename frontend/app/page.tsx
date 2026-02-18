@@ -143,7 +143,6 @@ export default function DashboardPage() {
           </div>
 
           {/* Top 3 Categories */}
-          {/* เพิ่ม key เพื่อบังคับ Render ใหม่เมื่อ Filter เปลี่ยน */}
           <div key={`top3-${chartKey}`}>
             <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-3">Top 3 หมวดหมู่</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -167,7 +166,6 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">รายจ่ายตามหมวดหมู่</h2>
               {(summary.expenses_by_category || []).length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
-                  {/* เพิ่ม key ที่ PieChart เพื่อแก้ปัญหากราฟค้าง */}
                   <PieChart key={`pie-${chartKey}`}>
                     <Pie
                       data={summary.expenses_by_category || []}
@@ -209,7 +207,6 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">เปรียบเทียบหมวดหมู่</h2>
               {(summary.expenses_by_category || []).length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
-                   {/* เพิ่ม key ที่ BarChart */}
                   <BarChart key={`bar-${chartKey}`} data={summary.expenses_by_category || []}>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                     <XAxis dataKey="category_name" tick={{ fontSize: 11, fill: textColor }} />
@@ -244,7 +241,6 @@ export default function DashboardPage() {
             <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">แนวโน้มรายจ่ายตามเวลา</h2>
             {(summary.timeline_data || []).length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
-                 {/* เพิ่ม key ที่ LineChart */}
                 <LineChart key={`line-${chartKey}`} data={summary.timeline_data}>
                   <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                   <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 11, fill: textColor }} />

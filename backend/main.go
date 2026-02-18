@@ -108,7 +108,10 @@ func seedCategories() {
 			{Name: "อื่นๆ", Icon: "📌"},
 		}
 
-		db.Create(&defaultCategories)
+		result := db.Create(&defaultCategories)
+		if result.Error != nil {
+			log.Fatal("Failed to seed categories:", result.Error)
+		}
 		log.Println("Default categories seeded")
 	}
 }

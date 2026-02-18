@@ -1,117 +1,87 @@
-# Expense Tracker
+# Expense Tracker (Go + Next.js)
 
-โปรแกรมบันทึกและแสดงผลค่าใช้จ่าย พร้อม Dashboard สรุปรายจ่ายตามหมวดหมู่
-
-## Tech Stack
-
-- **Backend:** Go + Gin + GORM
-- **Frontend:** Next.js 15 + TypeScript + Tailwind CSS + Recharts
-- **Database:** PostgreSQL
-- **Infrastructure:** Docker + Docker Compose
+ระบบ Expense Tracker นี้เป็นแอปพลิเคชันสำหรับบันทึกและวิเคราะห์ค่าใช้จ่ายส่วนบุคคล ประกอบด้วย Backend (Go, Gin, GORM, PostgreSQL) และ Frontend (Next.js, React, TypeScript, TailwindCSS, Recharts)
 
 ## Features
+- จัดการหมวดหมู่ค่าใช้จ่าย (เพิ่ม/แก้ไข/ลบ)
+- บันทึกค่าใช้จ่าย (เพิ่ม/แก้ไข/ลบ)
+- กรองข้อมูลตามช่วงวันที่และหมวดหมู่
+- Dashboard สรุปยอดรวม, Top 3 หมวดหมู่, Timeline รายวัน
+- แสดงผลกราฟด้วย Recharts
 
-- บันทึก/แก้ไข/ลบรายจ่าย
-- จัดหมวดหมู่รายจ่าย
-- Filter ตามช่วงวันที่และหมวดหมู่
-- Sort ตามวันที่และจำนวนเงิน
-- Dashboard แสดง Pie Chart, Bar Chart, Line Chart
-- สรุป Top 3 หมวดหมู่ที่ใช้จ่ายมากที่สุด
+## Tech Stack
+- **Backend:** Go, Gin, GORM, PostgreSQL
+- **Frontend:** Next.js, React, TypeScript, TailwindCSS, Recharts
+- **Docker:** รองรับการรันทั้งระบบด้วย Docker Compose
 
-## การรันด้วย Docker (แนะนำ)
+## โครงสร้างโปรเจกต์
+```
+├── backend/         # Go API Server
+│   ├── handlers.go
+│   ├── main.go
+│   ├── models.go
+│   └── go.mod
+├── frontend/        # Next.js Frontend
+│   ├── app/
+│   ├── lib/api.ts
+│   ├── types/index.ts
+│   └── ...
+├── docker-compose.yml
+└── README.md
+```
 
+## การติดตั้งและรันระบบ
+### 1. Clone Repo
 ```bash
-# Clone repository
 git clone <repo-url>
-cd expense-tracker
+cd vp-skilltest-expense-tracker
+```
 
-# รันทั้ง stack
+### 2. รันด้วย Docker Compose
+```bash
 ./run_docker-compose.sh
-
-# เข้าใช้งาน
-# Frontend: http://localhost:3000
-# Backend:  http://localhost:8080
+# หรือ
+# docker-compose up --build
 ```
 
-## การรันแบบ Development
+- Backend จะรันที่ http://localhost:8080
+- Frontend จะรันที่ http://localhost:3000
 
-### Backend (Go)
+### 4. เข้าถึงระบบ
+เปิดเบราว์เซอร์ที่ http://localhost:3000
 
-```bash
-cd backend
+## API Endpoints (Backend)
+- `GET    /api/categories`         : ดึงหมวดหมู่
+- `POST   /api/categories`         : เพิ่มหมวดหมู่
+- `PUT    /api/categories/:id`     : แก้ไขหมวดหมู่
+- `DELETE /api/categories/:id`     : ลบหมวดหมู่
+- `GET    /api/expenses`           : ดึงรายการค่าใช้จ่าย (รองรับ filter)
+- `POST   /api/expenses`           : เพิ่มค่าใช้จ่าย
+- `PUT    /api/expenses/:id`       : แก้ไขค่าใช้จ่าย
+- `DELETE /api/expenses/:id`       : ลบค่าใช้จ่าย
+- `GET    /api/dashboard/summary`  : Dashboard summary (รองรับ filter)
 
-# ตั้งค่า environment variables
-export DB_HOST=localhost
-export DB_PORT=5432
-export DB_USER=expenseuser
-export DB_PASSWORD=expensepass
-export DB_NAME=expensedb
-export PORT=8080
+## โครงสร้างข้อมูลหลัก
+### Expense
+- id: number
+- amount: number
+- date: string (YYYY-MM-DD)
+- category: Category
+- description: string
 
-# รัน
-go mod tidy
-go run .
-```
+### Category
+- id: number
+- name: string
+- icon: string
 
-### Frontend (Next.js)
+## หมายเหตุ
+- ระบบรองรับ Timezone Asia/Bangkok ทั้งฝั่ง backend และ dashboard
+- สามารถปรับแต่งหมวดหมู่และช่วงวันที่ได้
+- มีตัวอย่าง seed ข้อมูลหมวดหมู่เริ่มต้น
 
-```bash
-cd frontend
+---
 
-# ติดตั้ง dependencies
-npm install
+**ผู้พัฒนา:**
+- Tin Auppati
+# Expense Tracker
 
-# รัน development server
-npm run dev
-
-# เข้าใช้งานที่ http://localhost:3000
-```
-
-### Database (PostgreSQL)
-
-```bash
-# รันแค่ database ด้วย Docker
-docker compose up postgres -d
-```
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/categories` | ดึงหมวดหมู่ทั้งหมด |
-| POST | `/api/categories` | สร้างหมวดหมู่ใหม่ |
-| PUT | `/api/categories/:id` | แก้ไขหมวดหมู่ |
-| DELETE | `/api/categories/:id` | ลบหมวดหมู่ |
-| GET | `/api/expenses` | ดึงรายจ่าย (รองรับ filter/sort) |
-| POST | `/api/expenses` | สร้างรายจ่ายใหม่ |
-| PUT | `/api/expenses/:id` | แก้ไขรายจ่าย |
-| DELETE | `/api/expenses/:id` | ลบรายจ่าย |
-| GET | `/api/dashboard/summary` | ดึงข้อมูล Dashboard |
-
-### Query Parameters สำหรับ GET /api/expenses
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `start_date` | string (YYYY-MM-DD) | กรองตั้งแต่วันที่ |
-| `end_date` | string (YYYY-MM-DD) | กรองถึงวันที่ |
-| `category_id` | number | กรองตามหมวดหมู่ |
-| `sort` | string (date, amount) | เรียงลำดับตาม field |
-| `order` | string (asc, desc) | ทิศทางการเรียง |
-
-## Database Schema
-
-```sql
-categories
-- id          SERIAL PRIMARY KEY
-- name        VARCHAR NOT NULL
-- icon        VARCHAR
-- created_at  TIMESTAMP
-
-expenses
-- id          SERIAL PRIMARY KEY
-- amount      DECIMAL(10,2) NOT NULL
-- category_id INTEGER REFERENCES categories(id)
-- description VARCHAR
-- date        TIMESTAMP NOT NULL
-- created_at  TIMESTAMP
-```
