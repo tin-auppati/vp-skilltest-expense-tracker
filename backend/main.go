@@ -34,6 +34,13 @@ func main() {
 		AllowCredentials: true,
 	}))
 
+	// Health check
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
+
 	// Routes
 	api := r.Group("/api")
 	{
